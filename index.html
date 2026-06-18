@@ -91,6 +91,20 @@
     .progress-track { height: 7px; flex: 1; overflow: hidden; border-radius: 999px; background: #e5e6de; }
     .progress-bar { width: 0; height: 100%; border-radius: inherit; background: var(--green); transition: width .25s ease; }
     .progress-label { min-width: 98px; color: var(--green); font-size: 13px; font-weight: 800; text-align: right; }
+    .timer {
+      min-width: 72px;
+      padding: 6px 10px;
+      border-radius: 9px;
+      background: #e9ebdf;
+      color: var(--green);
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .timer.running { background: var(--lime); }
+    .timer.urgent { background: #ffd7d1; color: var(--wrong); animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { opacity: .58; } }
 
     .quiz-card {
       overflow: hidden;
@@ -111,6 +125,7 @@
     .question.unanswered { background: #fff1e9; }
     .question.correct { background: #edf8ef; }
     .question.incorrect { background: #fff0ed; }
+    .question.locked .option span { cursor: default; transform: none; }
     .prompt { display: flex; align-items: baseline; gap: 12px; }
     .number { width: 28px; color: #9a9e96; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
     .verb { font-family: Georgia, "Times New Roman", serif; font-size: 26px; font-weight: 600; }
@@ -191,7 +206,7 @@
     <p class="eyebrow">100 most common verbs</p>
     <h1>Знаешь вторую <em>форму?</em></h1>
     <div class="intro">
-      <p>Выбери форму Past Simple для каждого глагола. В каждом вопросе только один правильный ответ, и за него ты получишь 1 балл.</p>
+      <p>Выбери форму Past Simple для каждого глагола. Будь внимателен: среди вариантов есть другие формы и очень правдоподобные ошибки. Ответ изменить нельзя.</p>
       <span class="score-pill">Максимум — 100 баллов</span>
     </div>
   </header>
@@ -200,6 +215,7 @@
     <div class="progress-wrap" aria-live="polite">
       <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
       <span class="progress-label" id="progressLabel">0 из 100</span>
+      <span class="timer" id="timer" title="Таймер запустится после первого ответа">20:00</span>
     </div>
 
     <form id="quizForm" novalidate>
@@ -251,6 +267,29 @@
     const result = document.querySelector("#result");
     const progressBar = document.querySelector("#progressBar");
     const progressLabel = document.querySelector("#progressLabel");
+    const timerDisplay = document.querySelector("#timer");
+    let selectedAnswers = Array(verbs.length).fill(null);
+    let currentScore = 0;
+    let secondsLeft = 20 * 60;
+    let timerId = null;
+    let testFinished = false;
+
+    // Третьи формы и типичные ошибочные варианты для неправильных глаголов.
+    const traps = {
+      be: ["been", "beed"], have: ["has", "haved"], do: ["done", "doed"], say: ["sayed", "says"],
+      go: ["gone", "goed"], drive: ["driven", "drived"], get: ["gotten", "getted"], make: ["maked", "maden"],
+      know: ["known", "knowed"], think: ["thoughten", "thinked"], take: ["taken", "taked"], see: ["seen", "seed"],
+      come: ["came", "comed"], find: ["founden", "finded"], give: ["given", "gived"], tell: ["telled", "tellen"],
+      feel: ["felted", "feeled"], become: ["become", "becomed"], leave: ["leaved", "leaven"], put: ["putted", "puten"],
+      mean: ["meaned", "meanten"], keep: ["keeped", "kepten"], let: ["letted", "leten"], begin: ["begun", "begined"],
+      show: ["shown", "showen"], hear: ["heared", "hearn"], run: ["run", "runned"], hold: ["helded", "holden"],
+      bring: ["bringed", "broughten"], write: ["written", "writed"], sit: ["sitted", "sitten"], stand: ["standen", "standed"],
+      lose: ["loosed", "losen"], pay: ["payed", "paiden"], meet: ["meeted", "meten"], set: ["setted", "seten"],
+      learn: ["learnted", "learnen"], lead: ["leaded", "ledded"], understand: ["understanden", "understanded"],
+      speak: ["spoken", "speaked"], read: ["readed", "readen"], spend: ["spended", "spenten"], grow: ["grown", "growed"],
+      win: ["winned", "wonnen"], buy: ["buyed", "boughten"], send: ["sended", "senten"], build: ["builded", "builtend"],
+      fall: ["fallen", "falled"], cut: ["cutted", "cuten"], sell: ["selled", "solden"]
+    };
 
     function seededShuffle(items, seed) {
       const copy = [...items];
@@ -264,12 +303,51 @@
     }
 
     function choicesFor(index) {
-      const correct = verbs[index][1];
-      const distractors = verbs
-        .map(item => item[1])
-        .filter((answer, position, all) => answer !== correct && all.indexOf(answer) === position);
-      const mixed = seededShuffle(distractors, index * 19 + 7).slice(0, 2);
-      return seededShuffle([correct, ...mixed], index * 31 + 11);
+      const [base, correct] = verbs[index];
+      const stem = base.endsWith("e") ? base.slice(0, -1) : base;
+      const ing = base.endsWith("ie") ? `${base.slice(0, -2)}ying` : `${stem}ing`;
+      const naivePast = base.endsWith("e") ? `${base}d` : base.endsWith("y") ? `${base.slice(0, -1)}ied` : `${base}ed`;
+      const candidates = [
+        ...(traps[base] || []), naivePast, base, ing,
+        base.endsWith("y") ? `${base.slice(0, -1)}ies` : `${base}s`,
+        verbs[(index + 7) % verbs.length][1]
+      ].filter((answer, position, all) => answer !== correct && all.indexOf(answer) === position);
+      return seededShuffle([correct, ...candidates.slice(0, 2)], index * 31 + 11);
+    }
+
+    function playSound(isCorrect) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+
+      if (isCorrect) {
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.2, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+        [880, 1320].forEach((frequency, i) => {
+          const oscillator = ctx.createOscillator();
+          oscillator.type = "sine";
+          oscillator.frequency.value = frequency;
+          oscillator.connect(gain);
+          oscillator.start(now + i * 0.07);
+          oscillator.stop(now + 0.55);
+        });
+      } else {
+        const oscillator = ctx.createOscillator();
+        oscillator.type = "sawtooth";
+        oscillator.frequency.setValueAtTime(105, now);
+        oscillator.frequency.exponentialRampToValueAtTime(38, now + 0.38);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+        oscillator.connect(gain);
+        oscillator.start(now);
+        oscillator.stop(now + 0.42);
+      }
+      setTimeout(() => ctx.close(), 700);
     }
 
     function renderQuiz() {
@@ -288,25 +366,61 @@
     }
 
     function updateProgress() {
-      const answered = new FormData(form);
-      let count = 0;
-      for (const key of answered.keys()) if (key.startsWith("q")) count++;
+      const count = selectedAnswers.filter(answer => answer !== null).length;
       progressBar.style.width = `${count}%`;
       progressLabel.textContent = `${count} из 100`;
     }
 
+    function updateTimerDisplay() {
+      const minutes = Math.floor(secondsLeft / 60);
+      const seconds = secondsLeft % 60;
+      timerDisplay.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      timerDisplay.classList.toggle("urgent", secondsLeft <= 60 && secondsLeft > 0);
+    }
+
+    function startTimer() {
+      if (timerId || testFinished) return;
+      timerDisplay.classList.add("running");
+      timerDisplay.title = "Оставшееся время";
+      timerId = setInterval(() => {
+        secondsLeft--;
+        updateTimerDisplay();
+        if (secondsLeft <= 0) finishQuiz(true);
+      }, 1000);
+    }
+
     quiz.addEventListener("change", event => {
-      event.target.closest(".question")?.classList.remove("unanswered");
+      const input = event.target;
+      if (!input.matches('input[type="radio"]')) return;
+      const question = input.closest(".question");
+      const index = Number(question.dataset.index);
+      if (selectedAnswers[index] !== null) return;
+      startTimer();
+
+      const selected = input.value;
+      const correct = verbs[index][1];
+      const isCorrect = selected === correct;
+      selectedAnswers[index] = selected;
+      if (isCorrect) currentScore++;
+
+      question.classList.remove("unanswered");
+      question.classList.add("locked", isCorrect ? "correct" : "incorrect");
+      question.querySelectorAll("input").forEach(optionInput => {
+        optionInput.disabled = true;
+        const label = optionInput.closest(".option");
+        if (optionInput.value === correct) label.classList.add("answer-right");
+        else if (optionInput === input) label.classList.add("answer-wrong");
+      });
+      playSound(isCorrect);
       updateProgress();
     });
 
-    form.addEventListener("submit", event => {
-      event.preventDefault();
-      const data = new FormData(form);
-      const missing = verbs.map((_, i) => i).filter(i => !data.has(`q${i}`));
+    function finishQuiz(timeExpired = false) {
+      if (testFinished) return;
+      const missing = verbs.map((_, i) => i).filter(i => selectedAnswers[i] === null);
       document.querySelectorAll(".question").forEach(el => el.classList.remove("unanswered"));
 
-      if (missing.length) {
+      if (missing.length && !timeExpired) {
         missing.forEach(i => document.querySelector(`[data-index="${i}"]`).classList.add("unanswered"));
         const first = document.querySelector(`[data-index="${missing[0]}"]`);
         first.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -314,21 +428,27 @@
         return;
       }
 
-      let score = 0;
+      testFinished = true;
+      clearInterval(timerId);
+      timerId = null;
+      timerDisplay.classList.remove("running", "urgent");
+      timerDisplay.title = "Тест завершён";
+      if (timeExpired) {
+        timerDisplay.textContent = "00:00";
+        missing.forEach(index => {
+          const question = document.querySelector(`[data-index="${index}"]`);
+          question.classList.add("locked", "incorrect");
+          question.querySelectorAll("input").forEach(input => {
+            input.disabled = true;
+            if (input.value === verbs[index][1]) input.closest(".option").classList.add("answer-right");
+          });
+        });
+      }
+
+      const score = currentScore;
       const wrong = [];
       verbs.forEach(([verb, correct], index) => {
-        const question = document.querySelector(`[data-index="${index}"]`);
-        const selected = data.get(`q${index}`);
-        const isCorrect = selected === correct;
-        if (isCorrect) score++;
-        else wrong.push(`${verb} → ${correct}`);
-        question.classList.add(isCorrect ? "correct" : "incorrect");
-        question.querySelectorAll("input").forEach(input => {
-          input.disabled = true;
-          const label = input.closest(".option");
-          if (input.value === correct) label.classList.add("answer-right");
-          else if (input.checked) label.classList.add("answer-wrong");
-        });
+        if (selectedAnswers[index] !== correct) wrong.push(`${verb} → ${correct}`);
       });
 
       const percent = score;
@@ -341,18 +461,32 @@
 
       document.querySelector("#score").textContent = score;
       document.querySelector("#resultTitle").textContent = title;
-      document.querySelector("#resultText").textContent = `${text} Правильных ответов: ${score} из 100.`;
+      document.querySelector("#resultText").textContent = `${timeExpired ? "Время вышло. " : ""}${text} Правильных ответов: ${score} из 100.`;
       document.querySelector("#mistakes").innerHTML = wrong.length
         ? `<h3>Повторить (${wrong.length})</h3><div class="mistake-list">${wrong.map(item => `<span>${item}</span>`).join("")}</div>`
         : `<h3>Ошибок нет — идеальная работа</h3>`;
       result.classList.add("show");
       result.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      finishQuiz(false);
     });
 
     document.querySelector("#restart").addEventListener("click", () => {
       form.reset();
+      selectedAnswers = Array(verbs.length).fill(null);
+      currentScore = 0;
+      testFinished = false;
+      clearInterval(timerId);
+      timerId = null;
+      secondsLeft = 20 * 60;
+      timerDisplay.classList.remove("running", "urgent");
+      timerDisplay.title = "Таймер запустится после первого ответа";
+      updateTimerDisplay();
       document.querySelectorAll(".question").forEach(question => {
-        question.classList.remove("correct", "incorrect", "unanswered");
+        question.classList.remove("correct", "incorrect", "unanswered", "locked");
         question.querySelectorAll("input").forEach(input => { input.disabled = false; });
         question.querySelectorAll(".option").forEach(option => option.classList.remove("answer-right", "answer-wrong"));
       });
