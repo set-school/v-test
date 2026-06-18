@@ -3,499 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Интерактивный тест на знание второй формы 100 английских глаголов">
-  <title>VerbSprint — тест на вторую форму глаголов</title>
+  <meta name="description" content="VerbSprint — интерактивные тесты по 100 самым частым английским глаголам">
+  <title>VerbSprint — выберите тест</title>
   <style>
-    :root {
-      --ink: #182019;
-      --muted: #687068;
-      --paper: #fffdf7;
-      --line: #dcded6;
-      --green: #174d3b;
-      --lime: #dff56c;
-      --coral: #ff7b61;
-      --wrong: #b43b35;
-      --right: #19734f;
-      --shadow: 0 20px 55px rgba(23, 77, 59, .12);
-    }
-
+    :root { --ink:#182019; --green:#174d3b; --lime:#dff56c; --coral:#ff7b61; --paper:#fffdf7; }
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
     body {
+      min-height: 100vh;
       margin: 0;
       color: var(--ink);
       background:
-        radial-gradient(circle at 8% 2%, rgba(223,245,108,.55), transparent 24rem),
-        radial-gradient(circle at 92% 16%, rgba(255,123,97,.18), transparent 22rem),
+        radial-gradient(circle at 8% 4%, rgba(223,245,108,.65), transparent 25rem),
+        radial-gradient(circle at 92% 20%, rgba(255,123,97,.22), transparent 25rem),
         #f2f3eb;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-
-    button, input { font: inherit; }
     .shell { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
-
-    header { padding: 54px 0 30px; }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 15px;
-      padding: 7px 11px;
-      border: 1px solid rgba(23,77,59,.18);
-      border-radius: 999px;
-      background: rgba(255,255,255,.55);
-      color: var(--green);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-    }
-    .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--coral); }
-    h1 {
-      max-width: 820px;
-      margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(44px, 8vw, 92px);
-      font-weight: 500;
-      letter-spacing: -.055em;
-      line-height: .92;
-    }
+    header { padding: clamp(48px, 9vw, 105px) 0 42px; }
+    .eyebrow { margin: 0 0 15px; color: var(--green); font-size: 12px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { max-width: 850px; margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(52px, 9vw, 104px); font-weight: 500; letter-spacing: -.06em; line-height: .9; }
     h1 em { color: var(--green); font-style: italic; }
-    .intro {
+    .lead { max-width: 630px; margin: 28px 0 0; color: #667067; font-size: 18px; line-height: 1.6; }
+    .tests { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; padding-bottom: 80px; }
+    .tile {
+      position: relative;
       display: flex;
+      min-height: 320px;
+      flex-direction: column;
       justify-content: space-between;
-      gap: 28px;
-      align-items: end;
-      margin-top: 28px;
-      padding-top: 22px;
-      border-top: 1px solid rgba(24,32,25,.22);
-    }
-    .intro p { max-width: 640px; margin: 0; color: var(--muted); font-size: 17px; line-height: 1.6; }
-    .score-pill { flex: none; color: var(--green); font-weight: 850; font-size: 14px; }
-
-    .progress-wrap {
-      position: sticky;
-      z-index: 10;
-      top: 12px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin: 0 0 20px;
-      padding: 12px 15px;
-      border: 1px solid rgba(23,77,59,.13);
-      border-radius: 14px;
-      background: rgba(255,253,247,.9);
-      box-shadow: 0 8px 26px rgba(24,32,25,.07);
-      backdrop-filter: blur(12px);
-    }
-    .progress-track { height: 7px; flex: 1; overflow: hidden; border-radius: 999px; background: #e5e6de; }
-    .progress-bar { width: 0; height: 100%; border-radius: inherit; background: var(--green); transition: width .25s ease; }
-    .progress-label { min-width: 98px; color: var(--green); font-size: 13px; font-weight: 800; text-align: right; }
-    .timer {
-      min-width: 72px;
-      padding: 6px 10px;
-      border-radius: 9px;
-      background: #e9ebdf;
-      color: var(--green);
-      font-variant-numeric: tabular-nums;
-      font-size: 14px;
-      font-weight: 900;
-      text-align: center;
-    }
-    .timer.running { background: var(--lime); }
-    .timer.urgent { background: #ffd7d1; color: var(--wrong); animation: pulse 1s infinite; }
-    @keyframes pulse { 50% { opacity: .58; } }
-
-    .quiz-card {
       overflow: hidden;
+      padding: clamp(25px, 4vw, 42px);
       border: 1px solid rgba(24,32,25,.14);
-      border-radius: 24px;
-      background: var(--paper);
-      box-shadow: var(--shadow);
-    }
-    .question {
-      display: grid;
-      grid-template-columns: 205px 1fr;
-      gap: 30px;
-      padding: 24px 28px;
-      border-bottom: 1px solid var(--line);
-      transition: background .2s ease;
-    }
-    .question:last-child { border-bottom: 0; }
-    .question.unanswered { background: #fff1e9; }
-    .question.correct { background: #edf8ef; }
-    .question.incorrect { background: #fff0ed; }
-    .question.locked .option span { cursor: default; transform: none; }
-    .prompt { display: flex; align-items: baseline; gap: 12px; }
-    .number { width: 28px; color: #9a9e96; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
-    .verb { font-family: Georgia, "Times New Roman", serif; font-size: 26px; font-weight: 600; }
-    .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-    .option { position: relative; min-width: 0; }
-    .option input { position: absolute; opacity: 0; pointer-events: none; }
-    .option span {
-      display: flex;
-      min-height: 48px;
-      align-items: center;
-      justify-content: center;
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 11px;
-      background: #fff;
-      font-weight: 750;
-      text-align: center;
-      cursor: pointer;
-      transition: transform .15s ease, border-color .15s ease, background .15s ease;
-    }
-    .option span:hover { transform: translateY(-2px); border-color: var(--green); }
-    .option input:focus-visible + span { outline: 3px solid rgba(255,123,97,.38); outline-offset: 2px; }
-    .option input:checked + span { border-color: var(--green); background: var(--lime); color: #102c23; }
-    .option input:disabled + span { cursor: default; transform: none; }
-    .option.answer-right span { border-color: var(--right); background: #ccebd9; color: #11573b; }
-    .option.answer-wrong span { border-color: var(--wrong); background: #ffd7d1; color: #812821; text-decoration: line-through; }
-
-    .actions { display: flex; justify-content: center; padding: 34px 0 70px; }
-    .primary {
-      border: 0;
-      border-radius: 999px;
-      padding: 17px 28px;
-      background: var(--green);
-      color: #fff;
-      font-weight: 850;
-      box-shadow: 0 12px 28px rgba(23,77,59,.22);
-      cursor: pointer;
-      transition: transform .16s ease, box-shadow .16s ease;
-    }
-    .primary:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(23,77,59,.28); }
-
-    .result {
-      display: none;
-      margin: 0 0 70px;
-      padding: clamp(28px, 5vw, 54px);
       border-radius: 26px;
-      background: var(--green);
-      color: #fff;
-      box-shadow: var(--shadow);
+      color: var(--ink);
+      text-decoration: none;
+      box-shadow: 0 20px 55px rgba(23,77,59,.1);
+      transition: transform .2s ease, box-shadow .2s ease;
     }
-    .result.show { display: block; animation: rise .45s ease both; }
-    @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
-    .result-grid { display: grid; grid-template-columns: auto 1fr; gap: clamp(28px, 6vw, 70px); align-items: center; }
-    .big-score { font-family: Georgia, "Times New Roman", serif; font-size: clamp(72px, 14vw, 145px); line-height: .8; letter-spacing: -.06em; }
-    .big-score small { font-family: Inter, sans-serif; font-size: 18px; letter-spacing: 0; opacity: .68; }
-    .result h2 { margin: 0 0 10px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 5vw, 50px); font-weight: 500; }
-    .result p { margin: 0 0 22px; color: rgba(255,255,255,.72); font-size: 17px; line-height: 1.55; }
-    .secondary { border: 1px solid rgba(255,255,255,.42); border-radius: 999px; padding: 12px 18px; background: transparent; color: #fff; font-weight: 800; cursor: pointer; }
-    .mistakes { margin-top: 28px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.18); }
-    .mistakes h3 { margin: 0 0 12px; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; }
-    .mistake-list { display: flex; flex-wrap: wrap; gap: 8px; }
-    .mistake-list span { padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,.1); font-size: 14px; }
-
-    footer { padding: 0 0 36px; color: #777d75; font-size: 13px; text-align: center; }
-    @media (max-width: 700px) {
-      header { padding-top: 35px; }
-      .intro { display: block; }
-      .score-pill { margin-top: 14px; }
-      .question { grid-template-columns: 1fr; gap: 14px; padding: 20px 16px; }
-      .options { gap: 6px; }
-      .option span { min-height: 44px; padding: 7px 4px; font-size: 13px; }
-      .result-grid { grid-template-columns: 1fr; }
-    }
+    .tile:hover { transform: translateY(-7px); box-shadow: 0 28px 65px rgba(23,77,59,.17); }
+    .tile:first-child { background: var(--paper); }
+    .tile:last-child { background: var(--green); color: #fff; }
+    .tile-number { color: var(--coral); font-size: 13px; font-weight: 900; letter-spacing: .12em; }
+    .tile h2 { max-width: 430px; margin: 0 0 13px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(34px, 5vw, 55px); font-weight: 500; line-height: .98; }
+    .tile p { max-width: 440px; margin: 0; color: #687068; line-height: 1.55; }
+    .tile:last-child p { color: rgba(255,255,255,.7); }
+    .arrow { position: absolute; top: 28px; right: 30px; display: grid; width: 44px; height: 44px; place-items: center; border-radius: 50%; background: var(--lime); color: var(--green); font-size: 22px; transition: transform .2s ease; }
+    .tile:hover .arrow { transform: rotate(-15deg) scale(1.08); }
+    footer { padding: 0 0 30px; color: #737a72; font-size: 13px; text-align: center; }
+    @media (max-width: 720px) { .tests { grid-template-columns: 1fr; } .tile { min-height: 270px; } }
   </style>
 </head>
 <body>
   <header class="shell">
     <p class="eyebrow">100 most common verbs</p>
-    <h1>Знаешь вторую <em>форму?</em></h1>
-    <div class="intro">
-      <p>Выбери форму Past Simple для каждого глагола. Будь внимателен: среди вариантов есть другие формы и очень правдоподобные ошибки. Ответ изменить нельзя.</p>
-      <span class="score-pill">Максимум — 100 баллов</span>
-    </div>
+    <h1>Выбери свой <em>тест.</em></h1>
+    <p class="lead">Два способа проверить знание самых частых английских глаголов. В каждом тесте 100 вопросов, одна попытка на ответ и 20 минут.</p>
   </header>
 
-  <main class="shell">
-    <div class="progress-wrap" aria-live="polite">
-      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
-      <span class="progress-label" id="progressLabel">0 из 100</span>
-      <span class="timer" id="timer" title="Таймер запустится после первого ответа">20:00</span>
-    </div>
-
-    <form id="quizForm" novalidate>
-      <section class="quiz-card" id="quiz" aria-label="Вопросы теста"></section>
-      <div class="actions"><button class="primary" type="submit">Узнать результат →</button></div>
-    </form>
-
-    <section class="result" id="result" aria-live="polite">
-      <div class="result-grid">
-        <div class="big-score"><span id="score">0</span><small>/100</small></div>
-        <div>
-          <h2 id="resultTitle">Результат готов</h2>
-          <p id="resultText"></p>
-          <button class="secondary" id="restart" type="button">Пройти ещё раз</button>
-        </div>
-      </div>
-      <div class="mistakes" id="mistakes"></div>
-    </section>
+  <main class="shell tests">
+    <a class="tile" href="test.html?mode=forms">
+      <span class="tile-number">ТЕСТ 01</span><span class="arrow">↗</span>
+      <div><h2>Вторая форма глаголов</h2><p>Выбери правильную форму Past Simple среди похожих и ошибочных вариантов.</p></div>
+    </a>
+    <a class="tile" href="test.html?mode=translation">
+      <span class="tile-number">ТЕСТ 02</span><span class="arrow">↗</span>
+      <div><h2>Перевод на английский</h2><p>Найди английский инфинитив по русскому значению среди трёх похожих слов.</p></div>
+    </a>
   </main>
 
-  <footer class="shell">VerbSprint · тренажёр неправильных и правильных глаголов</footer>
-
-  <script>
-    const verbs = [
-      ["be", "was / were"], ["have", "had"], ["do", "did"], ["say", "said"], ["go", "went"],
-      ["drive", "drove"], ["get", "got"], ["make", "made"], ["know", "knew"], ["think", "thought"],
-      ["take", "took"], ["see", "saw"], ["come", "came"], ["want", "wanted"], ["look", "looked"],
-      ["use", "used"], ["find", "found"], ["give", "gave"], ["tell", "told"], ["work", "worked"],
-      ["call", "called"], ["try", "tried"], ["ask", "asked"], ["need", "needed"], ["feel", "felt"],
-      ["become", "became"], ["leave", "left"], ["put", "put"], ["mean", "meant"], ["keep", "kept"],
-      ["let", "let"], ["begin", "began"], ["seem", "seemed"], ["help", "helped"], ["talk", "talked"],
-      ["turn", "turned"], ["start", "started"], ["show", "showed"], ["hear", "heard"], ["play", "played"],
-      ["run", "ran"], ["move", "moved"], ["like", "liked"], ["live", "lived"], ["believe", "believed"],
-      ["hold", "held"], ["bring", "brought"], ["happen", "happened"], ["write", "wrote"], ["provide", "provided"],
-      ["sit", "sat"], ["stand", "stood"], ["lose", "lost"], ["pay", "paid"], ["meet", "met"],
-      ["include", "included"], ["continue", "continued"], ["set", "set"], ["learn", "learned / learnt"], ["change", "changed"],
-      ["lead", "led"], ["understand", "understood"], ["watch", "watched"], ["follow", "followed"], ["stop", "stopped"],
-      ["create", "created"], ["speak", "spoke"], ["read", "read /red/"], ["allow", "allowed"], ["add", "added"],
-      ["spend", "spent"], ["grow", "grew"], ["open", "opened"], ["walk", "walked"], ["win", "won"],
-      ["offer", "offered"], ["remember", "remembered"], ["love", "loved"], ["consider", "considered"], ["appear", "appeared"],
-      ["buy", "bought"], ["wait", "waited"], ["serve", "served"], ["die", "died"], ["send", "sent"],
-      ["expect", "expected"], ["build", "built"], ["stay", "stayed"], ["fall", "fell"], ["cut", "cut"],
-      ["reach", "reached"], ["kill", "killed"], ["remain", "remained"], ["suggest", "suggested"], ["raise", "raised"],
-      ["pass", "passed"], ["sell", "sold"], ["require", "required"], ["report", "reported"], ["decide", "decided"]
-    ];
-
-    const quiz = document.querySelector("#quiz");
-    const form = document.querySelector("#quizForm");
-    const result = document.querySelector("#result");
-    const progressBar = document.querySelector("#progressBar");
-    const progressLabel = document.querySelector("#progressLabel");
-    const timerDisplay = document.querySelector("#timer");
-    let selectedAnswers = Array(verbs.length).fill(null);
-    let currentScore = 0;
-    let secondsLeft = 20 * 60;
-    let timerId = null;
-    let testFinished = false;
-
-    // Третьи формы и типичные ошибочные варианты для неправильных глаголов.
-    const traps = {
-      be: ["been", "beed"], have: ["has", "haved"], do: ["done", "doed"], say: ["sayed", "says"],
-      go: ["gone", "goed"], drive: ["driven", "drived"], get: ["gotten", "getted"], make: ["maked", "maden"],
-      know: ["known", "knowed"], think: ["thoughten", "thinked"], take: ["taken", "taked"], see: ["seen", "seed"],
-      come: ["came", "comed"], find: ["founden", "finded"], give: ["given", "gived"], tell: ["telled", "tellen"],
-      feel: ["felted", "feeled"], become: ["become", "becomed"], leave: ["leaved", "leaven"], put: ["putted", "puten"],
-      mean: ["meaned", "meanten"], keep: ["keeped", "kepten"], let: ["letted", "leten"], begin: ["begun", "begined"],
-      show: ["shown", "showen"], hear: ["heared", "hearn"], run: ["run", "runned"], hold: ["helded", "holden"],
-      bring: ["bringed", "broughten"], write: ["written", "writed"], sit: ["sitted", "sitten"], stand: ["standen", "standed"],
-      lose: ["loosed", "losen"], pay: ["payed", "paiden"], meet: ["meeted", "meten"], set: ["setted", "seten"],
-      learn: ["learnted", "learnen"], lead: ["leaded", "ledded"], understand: ["understanden", "understanded"],
-      speak: ["spoken", "speaked"], read: ["readed", "readen"], spend: ["spended", "spenten"], grow: ["grown", "growed"],
-      win: ["winned", "wonnen"], buy: ["buyed", "boughten"], send: ["sended", "senten"], build: ["builded", "builtend"],
-      fall: ["fallen", "falled"], cut: ["cutted", "cuten"], sell: ["selled", "solden"]
-    };
-
-    function seededShuffle(items, seed) {
-      const copy = [...items];
-      let state = seed + 1;
-      for (let i = copy.length - 1; i > 0; i--) {
-        state = (state * 9301 + 49297) % 233280;
-        const j = Math.floor((state / 233280) * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function choicesFor(index) {
-      const [base, correct] = verbs[index];
-      const stem = base.endsWith("e") ? base.slice(0, -1) : base;
-      const ing = base.endsWith("ie") ? `${base.slice(0, -2)}ying` : `${stem}ing`;
-      const naivePast = base.endsWith("e") ? `${base}d` : base.endsWith("y") ? `${base.slice(0, -1)}ied` : `${base}ed`;
-      const candidates = [
-        ...(traps[base] || []), naivePast, base, ing,
-        base.endsWith("y") ? `${base.slice(0, -1)}ies` : `${base}s`,
-        verbs[(index + 7) % verbs.length][1]
-      ].filter((answer, position, all) => answer !== correct && all.indexOf(answer) === position);
-      return seededShuffle([correct, ...candidates.slice(0, 2)], index * 31 + 11);
-    }
-
-    function playSound(isCorrect) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      const now = ctx.currentTime;
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-
-      if (isCorrect) {
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.2, now + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-        [880, 1320].forEach((frequency, i) => {
-          const oscillator = ctx.createOscillator();
-          oscillator.type = "sine";
-          oscillator.frequency.value = frequency;
-          oscillator.connect(gain);
-          oscillator.start(now + i * 0.07);
-          oscillator.stop(now + 0.55);
-        });
-      } else {
-        const oscillator = ctx.createOscillator();
-        oscillator.type = "sawtooth";
-        oscillator.frequency.setValueAtTime(105, now);
-        oscillator.frequency.exponentialRampToValueAtTime(38, now + 0.38);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
-        oscillator.connect(gain);
-        oscillator.start(now);
-        oscillator.stop(now + 0.42);
-      }
-      setTimeout(() => ctx.close(), 700);
-    }
-
-    function renderQuiz() {
-      quiz.innerHTML = verbs.map(([verb], index) => {
-        const options = choicesFor(index).map(answer => `
-          <label class="option">
-            <input type="radio" name="q${index}" value="${answer}">
-            <span>${answer}</span>
-          </label>`).join("");
-        return `
-          <div class="question" data-index="${index}">
-            <div class="prompt"><span class="number">${String(index + 1).padStart(2, "0")}</span><span class="verb">${verb}</span></div>
-            <div class="options">${options}</div>
-          </div>`;
-      }).join("");
-    }
-
-    function updateProgress() {
-      const count = selectedAnswers.filter(answer => answer !== null).length;
-      progressBar.style.width = `${count}%`;
-      progressLabel.textContent = `${count} из 100`;
-    }
-
-    function updateTimerDisplay() {
-      const minutes = Math.floor(secondsLeft / 60);
-      const seconds = secondsLeft % 60;
-      timerDisplay.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-      timerDisplay.classList.toggle("urgent", secondsLeft <= 60 && secondsLeft > 0);
-    }
-
-    function startTimer() {
-      if (timerId || testFinished) return;
-      timerDisplay.classList.add("running");
-      timerDisplay.title = "Оставшееся время";
-      timerId = setInterval(() => {
-        secondsLeft--;
-        updateTimerDisplay();
-        if (secondsLeft <= 0) finishQuiz(true);
-      }, 1000);
-    }
-
-    quiz.addEventListener("change", event => {
-      const input = event.target;
-      if (!input.matches('input[type="radio"]')) return;
-      const question = input.closest(".question");
-      const index = Number(question.dataset.index);
-      if (selectedAnswers[index] !== null) return;
-      startTimer();
-
-      const selected = input.value;
-      const correct = verbs[index][1];
-      const isCorrect = selected === correct;
-      selectedAnswers[index] = selected;
-      if (isCorrect) currentScore++;
-
-      question.classList.remove("unanswered");
-      question.classList.add("locked", isCorrect ? "correct" : "incorrect");
-      question.querySelectorAll("input").forEach(optionInput => {
-        optionInput.disabled = true;
-        const label = optionInput.closest(".option");
-        if (optionInput.value === correct) label.classList.add("answer-right");
-        else if (optionInput === input) label.classList.add("answer-wrong");
-      });
-      playSound(isCorrect);
-      updateProgress();
-    });
-
-    function finishQuiz(timeExpired = false) {
-      if (testFinished) return;
-      const missing = verbs.map((_, i) => i).filter(i => selectedAnswers[i] === null);
-      document.querySelectorAll(".question").forEach(el => el.classList.remove("unanswered"));
-
-      if (missing.length && !timeExpired) {
-        missing.forEach(i => document.querySelector(`[data-index="${i}"]`).classList.add("unanswered"));
-        const first = document.querySelector(`[data-index="${missing[0]}"]`);
-        first.scrollIntoView({ behavior: "smooth", block: "center" });
-        progressLabel.textContent = `Осталось: ${missing.length}`;
-        return;
-      }
-
-      testFinished = true;
-      clearInterval(timerId);
-      timerId = null;
-      timerDisplay.classList.remove("running", "urgent");
-      timerDisplay.title = "Тест завершён";
-      if (timeExpired) {
-        timerDisplay.textContent = "00:00";
-        missing.forEach(index => {
-          const question = document.querySelector(`[data-index="${index}"]`);
-          question.classList.add("locked", "incorrect");
-          question.querySelectorAll("input").forEach(input => {
-            input.disabled = true;
-            if (input.value === verbs[index][1]) input.closest(".option").classList.add("answer-right");
-          });
-        });
-      }
-
-      const score = currentScore;
-      const wrong = [];
-      verbs.forEach(([verb, correct], index) => {
-        if (selectedAnswers[index] !== correct) wrong.push(`${verb} → ${correct}`);
-      });
-
-      const percent = score;
-      let title = "Продолжай тренировку";
-      let text = "Ошибки — это карта того, что стоит повторить. Следующая попытка точно будет сильнее.";
-      if (percent === 100) { title = "Безупречно!"; text = "Все 100 ответов правильные. Похоже, Past Simple у тебя уже в мышечной памяти."; }
-      else if (percent >= 85) { title = "Отличный результат"; text = "Ты уверенно знаешь вторую форму самых частых английских глаголов."; }
-      else if (percent >= 65) { title = "Хорошая база"; text = "Большая часть уже на месте. Повтори ошибки ниже — и результат быстро вырастет."; }
-      else if (percent >= 40) { title = "Неплохое начало"; text = "Знакомые формы уже узнаются. Ещё пара подходов поможет закрепить сложные глаголы."; }
-
-      document.querySelector("#score").textContent = score;
-      document.querySelector("#resultTitle").textContent = title;
-      document.querySelector("#resultText").textContent = `${timeExpired ? "Время вышло. " : ""}${text} Правильных ответов: ${score} из 100.`;
-      document.querySelector("#mistakes").innerHTML = wrong.length
-        ? `<h3>Повторить (${wrong.length})</h3><div class="mistake-list">${wrong.map(item => `<span>${item}</span>`).join("")}</div>`
-        : `<h3>Ошибок нет — идеальная работа</h3>`;
-      result.classList.add("show");
-      result.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    form.addEventListener("submit", event => {
-      event.preventDefault();
-      finishQuiz(false);
-    });
-
-    document.querySelector("#restart").addEventListener("click", () => {
-      form.reset();
-      selectedAnswers = Array(verbs.length).fill(null);
-      currentScore = 0;
-      testFinished = false;
-      clearInterval(timerId);
-      timerId = null;
-      secondsLeft = 20 * 60;
-      timerDisplay.classList.remove("running", "urgent");
-      timerDisplay.title = "Таймер запустится после первого ответа";
-      updateTimerDisplay();
-      document.querySelectorAll(".question").forEach(question => {
-        question.classList.remove("correct", "incorrect", "unanswered", "locked");
-        question.querySelectorAll("input").forEach(input => { input.disabled = false; });
-        question.querySelectorAll(".option").forEach(option => option.classList.remove("answer-right", "answer-wrong"));
-      });
-      result.classList.remove("show");
-      updateProgress();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    renderQuiz();
-  </script>
+  <footer class="shell">VerbSprint · тренажёр английских глаголов</footer>
 </body>
 </html>
